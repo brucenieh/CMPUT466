@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+import re
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
@@ -12,14 +13,20 @@ stop_words = stopwords.words('english')
 lemmatizer = WordNetLemmatizer()
 
 def preprocess(text):
-    result = word_tokenize(text)
+    text = text.lower()
+    text=text.replace('{html}',"") 
+    remove_chars = re.compile('<.*?>')
+    clean_text = re.sub(remove_chars, '', text)
+    remove_numbers = re.sub('[0-9]+', '', clean_text)
+    result = word_tokenize(remove_numbers)
+
     if remove_stop_words:
         result = [word for word in result if not word in stop_words]
     if lemmatize:
         result = [lemmatizer.lemmatize(word) for word in result]
     return result
 
-# Enter a local path to get the files
+
 def extract_info(folder: str, category: str):
     prefix = os.path.join(os.getcwd(), 'raw', folder, category)
     file_list = [os.path.join(prefix, f) for f in os.listdir(prefix) if f.endswith('.txt')]
@@ -49,4 +56,3 @@ def make_datasets():
 
         unsupervised = unsupervised.append(extract_info("train", "unsup"))
         unsupervised.to_csv(r'unsupervised_data.csv')
-
