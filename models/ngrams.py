@@ -1,24 +1,46 @@
 from nltk.util import ngrams, pad_sequence
 from nltk.probability import FreqDist
-from nltk.lm import MLE
-from nltk.lm.preprocessing import padded_everygram_pipeline
+from nltk.lm import MLE, Vocabulary
+from nltk.lm.preprocessing import pad_both_ends
+from collections import Counter, defaultdict
 
 class Ngrams:
     def __init__(self, n):
         self.n = n
 
     def train(self, data):
+        """[summary]
+
+        Args:
+            data ([type]): [description]
+        """
         n = self.n
-        # ngrams_list = []
-        # for line in data:
-        #     line = list(pad_both_ends(line, n=n))
-        #     ngrams_list.extend(list(ngrams(line, n)))
-        # print(ngrams_list)
-        lm = MLE(n)
-        train, vocab = padded_everygram_pipeline(n, data)
-        lm.fit(train, vocab)
-        print(lm.generate(text_seed=['4']))
+        ngrams_list = []
+        for line in data:
+            line = list(pad_both_ends(line, n=n))
+            ngrams_list.extend(list(ngrams(line, n)))
+
+        # https://medium.com/analytics-vidhya/a-comprehensive-guide-to-build-your-own-language-model-in-python-5141b3917d6d
+        self.model = defaultdict(lambda: defaultdict(lambda: 0))
+        if n == 2:
+            for ngram in ngrams_list:
+                self.model[ngram[0]][ngram[-1]] += 1
+        else:
+            for ngram in ngrams_list:
+                self.model[ngram[:-1]][ngram[-1]] += 1
+        
+        # for x in model:
+        #     total_count = float(sum(model[x].values()))
+        #     for y in model[x]:
+        #         model[x][y] /= total_count
+
+        # print(model)
 
 
-    def predict():
-        return 1
+    def predict(self, text, num_words=3):
+        if len(text) > self.n:
+            text = text[-self.n:]
+        word_count = sorted(self.model[text].items(), key=lambda item: item[1], reverse=True)
+        top_word_count = word_count[:num_words]
+        words = [word[0] for word in top_word_count]
+        return words
