@@ -1,4 +1,6 @@
 import csv
+import json
+import ast
 
 class Training_data():
     """data structure to store the training data
@@ -24,7 +26,8 @@ def k_fold(k,path):
     with open(path,'r') as f:
         csv_reader = csv.reader(f)
         for line in csv_reader:
-            data.append(line[1])
+            new_line = ast.literal_eval(line[1])
+            data.append(new_line)
     chunk_size = len(data)//k
     for i in range(k):
         td = Training_data()
@@ -40,6 +43,8 @@ def main():
 
     for data in dataset:
         print(len(data.validation_set),len(data.training_set))
+    
+    # print(dataset[0].validation_set[3:7])
         
 
 if __name__ == '__main__':
