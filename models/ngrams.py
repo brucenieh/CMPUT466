@@ -1,0 +1,2 @@
+def ngrams():
+    print("Hello")
