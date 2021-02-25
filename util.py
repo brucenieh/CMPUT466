@@ -1,6 +1,5 @@
 import csv
-import json
-import ast
+import pandas
 
 class Training_data():
     """data structure to store the training data
@@ -22,12 +21,10 @@ def k_fold(k,path):
         list: a list of k number of Training_data objects
     """
     dataset = []
-    data = []
-    with open(path,'r') as f:
-        csv_reader = csv.reader(f)
-        for line in csv_reader:
-            new_line = ast.literal_eval(line[1])
-            data.append(new_line)
+    # Read csv file, convert 'text' column from string to list
+    df = pandas.read_csv(path, converters={'text': eval})
+    # Convert the Series object to a python list
+    data = df['text'].tolist()
     chunk_size = len(data)//k
     for i in range(k):
         td = Training_data()
