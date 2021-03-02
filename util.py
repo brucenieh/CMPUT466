@@ -1,6 +1,5 @@
 import csv
-import json
-import ast
+import pandas
 
 class Training_data():
     """data structure to store the training data
@@ -22,12 +21,10 @@ def k_fold(k,path):
         list: a list of k number of Training_data objects
     """
     dataset = []
-    data = []
-    with open(path,'r') as f:
-        csv_reader = csv.reader(f)
-        for line in csv_reader:
-            new_line = ast.literal_eval(line[1])
-            data.append(new_line)
+    # Read csv file, convert 'text' column from string to list
+    df = pandas.read_csv(path, converters={'text': eval})
+    # Convert the Series object to a python list
+    data = df['text'].tolist()
     chunk_size = len(data)//k
     for i in range(k):
         td = Training_data()
@@ -45,10 +42,10 @@ def evaluate(model,training_data,testing_data):
         print('model training failed\n', e)
     
     for test in testing_data:
-        sentence = test[0:-1]
-        target = test[-1]
+        sentence = test[0:-3]
+        target = test[-3]
         try:
-            prediction = model.predict(sentence)
+            prediction = model.predict(sentence)[0]
         except Exception as e:
             print('model predicting failed\n', e)
         

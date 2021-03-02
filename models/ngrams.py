@@ -37,7 +37,7 @@ class Ngrams:
         # print(model)
 
 
-    def predict(self, text, num_words=3):
+    def predict(self, text, num_words=1):
         if len(text) > self.n:
             text = text[-self.n+1:]
         if self.n == 2:
