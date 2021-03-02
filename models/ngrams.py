@@ -42,6 +42,8 @@ class Ngrams:
             text = text[-self.n+1:]
         if self.n == 2:
             text = text[0]
+        else:
+            text = tuple(text)
         word_count = sorted(self.model[text].items(), key=lambda item: item[1], reverse=True)
         top_word_count = word_count[:num_words]
         words = [word[0] for word in top_word_count]
