@@ -6,6 +6,8 @@ from collections import Counter, defaultdict
 
 class Ngrams:
     def __init__(self, n):
+        if n not in range(2,21):
+            raise Exception("Invalid n, please use 2-20")
         self.n = n
 
     def train(self, data):
