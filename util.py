@@ -45,7 +45,7 @@ def evaluate(model,training_data,testing_data):
         sentence = test[0:-1]
         target = test[-1]
         try:
-            prediction = model.predict(sentence)
+            prediction = model.predict(sentence)[0]
         except Exception as e:
             print('model predicting failed\n', e)
         
