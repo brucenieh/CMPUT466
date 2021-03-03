@@ -14,11 +14,11 @@ lemmatizer = WordNetLemmatizer()
 
 def preprocess(text):
     text = text.lower()
-    text=text.replace('{html}',"") 
-    remove_chars = re.compile('<.*?>')
-    clean_text = re.sub(remove_chars, '', text)
-    remove_numbers = re.sub('[0-9]+', '', clean_text)
-    result = word_tokenize(remove_numbers)
+    chars = re.compile('<.*?>')
+    remove_chars = re.sub(chars, '', text)
+    clean_text = re.sub("[^'a-zA-Z\r\n]+", ' ', remove_chars)
+    clean_text = re.sub("[']", '', clean_text)
+    result = word_tokenize(clean_text)
 
     if remove_stop_words:
         result = [word for word in result if not word in stop_words]
