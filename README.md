@@ -4,8 +4,10 @@
 Required Python packages:
 
 ```
+keras
 pandas
 nltk
+tensorflow
 ```
 
 To preprosess the data, we need to install a few nltk packages: 
