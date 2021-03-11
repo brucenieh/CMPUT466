@@ -6,6 +6,21 @@ from collections import Counter, defaultdict
 
 class Ngrams:
     def __init__(self, n):
+        """Our n-gram model uses a default dict of default dict as our data
+        structure. The outer default dict consists of n-1 words tuples as keys
+        and default dicts as values. The inner default dict consists of n-th
+        words as keys and probabilities as values. For example:
+        self.model = {
+            ('This', 'is'): { 'a': 1.0 },
+            ('is', 'a'): { 'good': 0.5, 'bad': 0.5 }
+        }
+
+        Args:
+            n (int): n in n-gram
+
+        Raises:
+            Exception: Raised when n is not 2 to 20
+        """
         if n not in range(2,21):
             raise Exception("Invalid n, please use 2-20")
         self.n = n
@@ -61,8 +76,10 @@ class Ngrams:
             text = text[0]
         else:
             text = tuple(text)
+
         # sort next words from most probable to least probable
-        word_count = sorted(self.model[text].items(), key=lambda item: item[1], reverse=True)
+        word_count = sorted(self.model[text].items(), key=lambda item: item[1],
+                            reverse=True)
         top_word_count = word_count[:num_words]
         words = [word[0] for word in top_word_count]
         # if next word not found, return . as fallback
