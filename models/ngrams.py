@@ -24,7 +24,7 @@ class Ngrams:
         if n not in range(2,21):
             raise Exception("Invalid n, please use 2-20")
         self.n = n
-        self.model = defaultdict(lambda: defaultdict(lambda: 0))
+        self.model = defaultdict(lambda: defaultdict(lambda: 1))
 
     def train(self, data):
         """
@@ -49,17 +49,20 @@ class Ngrams:
         else:
             for ngram in ngrams_list:
                 self.model[ngram[:-1]][ngram[-1]] += 1
-        
-        # calculate probability distribution from count by iterating through
-        # each n-1 grams tuples and divide by the total number of n-th word
+        # add a tag for unknown words with count one, then calculate probability
+        # distribution from count by iterating through each n-1 grams tuples and
+        # divide by the total number of n-th word
         for x in self.model:
+            self.model[x]['<UNK>'] = 1
             total_count = float(sum(self.model[x].values()))
             for y in self.model[x]:
                 self.model[x][y] /= total_count
 
     def predict(self, text, num_words=1):
         """Predicts the next word based on the most probable words in our model,
-        returns the top num_words words found.
+        returns the top num_words words found and probability distribution of
+        the n-th word with add one smoothing in a defaultdict with key: value
+        'word': 'probability' 
 
         Args:
             text (str): sentence from testing data to predict next word for
@@ -68,6 +71,7 @@ class Ngrams:
 
         Returns:
             list of str: list of most probable words from our model
+            defaultdict: probability distribution of the n-th word
         """
         # only selects the last n-1 words to search in our model
         if len(text) > self.n:
@@ -84,5 +88,6 @@ class Ngrams:
         words = [word[0] for word in top_word_count]
         # if next word not found, return . as fallback
         if len(words) == 0:
-            return ['.']
-        return words
+            words = ['.']
+        prob_dist = self.model[text]
+        return words, prob_dist
