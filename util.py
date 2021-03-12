@@ -35,26 +35,48 @@ def k_fold(k,path):
     return dataset
 
 def evaluate(model,training_data,testing_data):
+    """returns the accuracy and perplexity of the model
+
+    Args:
+        model (Model): Model to be evaluated
+        training_data (Training_data): Data for the model to be trained on
+        testing_data (list(list(str))): A list of sentences
+
+    Returns:
+        float: Accuracy of the model
+        float: Perplexity of the model
+    """
     accuracy = 0
+    perplexity = 0
     try:
         model.train(training_data)
     except Exception as e:
         print('model training failed\n', e)
     
     for test in testing_data:
-        sentence = test[0:-3]
-        target = test[-3]
+        sentence = test[0:-1]
+        target = test[-1]
         try:
-            prediction = model.predict(sentence)[0]
+            prediction,prob_distrib = model.predict(sentence)
         except Exception as e:
             print('model predicting failed\n', e)
         
-        if prediction == target:
+        # Update accuracy
+        if prediction[0] == target:
             accuracy += 1
+        
+        # Update perplexity
+        if prob_distrib:
+            if target in prob_distrib.keys():
+                perplexity += 1/prob_distrib[target]
+            else:
+                perplexity += 1/prob_distrib['<UNK>']
+        
     
     accuracy = accuracy/len(testing_data)
+    perplexity = perplexity/len(testing_data)
 
-    return accuracy
+    return accuracy,perplexity
 
 def main():
     dataset = k_fold(10,'develop.csv')
