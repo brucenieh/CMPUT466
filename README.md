@@ -6,6 +6,7 @@ Required Python packages:
 ```
 pandas
 nltk
+tensorflow
 ```
 
 To preprosess the data, we need to install a few nltk packages: 

@@ -8,6 +8,7 @@ from nltk.stem import WordNetLemmatizer
 
 remove_stop_words = False
 lemmatize = False
+vectorize = False
 
 stop_words = stopwords.words('english')
 lemmatizer = WordNetLemmatizer()
@@ -24,6 +25,8 @@ def preprocess(text):
         result = [word for word in result if not word in stop_words]
     if lemmatize:
         result = [lemmatizer.lemmatize(word) for word in result]
+    if not vectorize:
+        result = ' '.join(result)
     return result
 
 
