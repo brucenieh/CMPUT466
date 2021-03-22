@@ -1,5 +1,6 @@
 import raw.readingfiles as readfiles
 from models.ngrams import Ngrams
+from models.ANN import ANN
 from util import evaluate, k_fold,read_data
 
 if __name__ == '__main__':
@@ -22,6 +23,12 @@ if __name__ == '__main__':
     #     if accuracy > best_n[1]:
     #         best_n = (n,accuracy)
     
-    ngrams_model = Ngrams(3)
-    accuracy,perplexity = evaluate(ngrams_model, training_set, testing_set)
-    print(accuracy,perplexity)
+    # ngrams_model = Ngrams(3)
+    # accuracy,perplexity = evaluate(ngrams_model, training_set, testing_set)
+    # print(accuracy,perplexity)
+
+
+    ANN_model = ANN()
+    # print(training_set[:5])
+    ANN_model.train(training_set[:5000])
+    # ANN_model.train(["abc"])
