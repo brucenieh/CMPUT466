@@ -1,4 +1,6 @@
-from keras.models import Sequential
+import tensorflow as tf
+from tensorflow.keras import layers
+from tensorflow.keras.models import Sequential
 
 class ANN:
     def __init__(self):
