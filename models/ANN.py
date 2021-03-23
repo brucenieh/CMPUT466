@@ -1,65 +1,93 @@
+import pickle
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.layers import Dense, Embedding, GRU
-from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Embedding, Flatten, GRU
+from tensorflow.keras.models import Sequential, load_model
 from sklearn.feature_extraction.text import CountVectorizer
+import os
 
 class ANN:
-    def __init__(self):
+    def __init__(self, sentence_length=50):
         """Our ANN model is a simple feed-forward neural network and is based on
         Keras' Sequential model.
         """
-        self.model = Sequential()
+        with open('vocab.pkl', 'rb') as f:
+            self.mapping = pickle.load(f)
+        vocab = len(self.mapping)
 
-    def train(self, data, sentence_length=30):
+        self.sentence_length = sentence_length
+        self.model = Sequential()
+        self.model.add(Embedding(vocab, 100, input_length=sentence_length, trainable=True))
+        self.model.add(Flatten())
+        self.model.add(Dense(2500, activation="relu"))
+        self.model.add(Dense(250, activation="relu"))
+        self.model.add(Dense(vocab, activation='softmax'))
+        self.model.compile(loss='categorical_crossentropy', metrics=['acc'], optimizer='adam')
+        self.model.summary()
+
+    def train(self, data):
         """Preprocesses training data and trains our model.
 
         Args:
             data (list of str): training data
         """
-        mapping = {}
-        counter = 0
-        for line in data:
-            for word in line:
-                if word in mapping:
-                    continue
-                else:
-                    mapping[word] = counter
-                    counter += 1
-        
-        vocab = len(mapping)
+        # mapping = {}
+        # counter = 0
+        # for line in data:
+        #     for word in line:
+        #         if word in mapping:
+        #             continue
+        #         else:
+        #             mapping[word] = counter
+        #             counter += 1
+        # print("###################\n",os.getcwd())
+        # with open('vocab.pkl', 'rb') as f:
+        #     mapping = pickle.load(f)
+
+        # vocab = len(mapping)
         # print(vocab)
 
         # self.model.add(Embedding(vocab, 20, input_length=sentence_length, trainable=True))
         # self.model.add(Dense(10000, activation="relu"))
         # self.model.add(Dense(1000, activation="softmax"))
 
-        # self.model.add(Embedding(vocab, 50, input_length=30, trainable=True))
-        self.model.add(Dense(1000, activation="relu"))
-        self.model.add(Dense(100, activation="relu"))
-        self.model.add(Dense(1, activation='softmax'))
-
-        self.model.compile(loss='categorical_crossentropy', metrics=['acc'], optimizer='adam')
-
-        X_train = np.ndarray([1, sentence_length + 1])
+        
+        # X_train = np.ndarray((1, sentence_length + 1))
+        # Y_train = np.ndarray((1, len(mapping)))
+        X_train = []
+        Y_train = []
         for line in data:
-            # vector = np.zeros(len(mapping))
+            if len(line) < self.sentence_length + 1:
+                continue
+            vector = np.zeros(len(self.mapping))
+            y_word = line[self.sentence_length]
+            vector[self.mapping[y_word]] = 1
             # for word in line:
             #     index = mapping[word]
             #     vector[index] += 1
-            sentence = np.array([mapping[word] for word in line])
-            if len(sentence) < sentence_length + 1:
-                continue
-            X_train = np.vstack((X_train, sentence[:sentence_length + 1]))
-        print(X_train[:,:sentence_length].shape)
-        print(X_train[:,sentence_length:sentence_length + 1].shape)
-        self.model.fit(X_train[:,:sentence_length], X_train[:,sentence_length:sentence_length + 1], epochs=10, verbose=2)
+            sentence = np.array([self.mapping[word] for word in line])
+            
+            X_train.append(sentence[:self.sentence_length])
+            Y_train.append(vector)
+        X_train = np.asarray(X_train)
+        Y_train = np.asarray(Y_train)
+        print(X_train.shape)
+        print(Y_train.shape)
+        # Create a callback that saves the model's weights
+        # cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath='./ANN/',
+        #                                                  save_weights_only=True,
+        #                                                  verbose=1)
+        self.model.fit(X_train, Y_train, epochs=1, verbose=1)
+        self.model.save('./ANN/ANN_model')
         #     print(vector)
         # print(mapping)
         # vector = vectorizer.transform([' '.join(data[0])])
         # print(vector.shape)
-        # training_data 
-        pass
+        # training_data
+        # with open('ANN.pkl', 'wb') as f:
+        #     pickle.dump(self.model, f, pickle.HIGHEST_PROTOCOL) 
+        
+        return
 
     def predict(self, text):
         """Predicts the next word based on our model.
@@ -67,4 +95,7 @@ class ANN:
         Args:
             text (str): sentence from testing data to predict next word for
         """
-        pass
+        self.model = load_model('./ANN/ANN_model/')
+        print(len(text))
+        # yhat = self.model.predict(text)
+        # print(yhat)

@@ -1,5 +1,6 @@
 import csv
 import pandas
+import pickle
 
 class Training_data():
     """data structure to store the training data
@@ -92,6 +93,19 @@ def evaluate(model,training_data,testing_data):
     perplexity = perplexity/len(testing_data)
 
     return accuracy,perplexity
+
+def build_vocab(data,name):
+    mapping = {}
+    counter = 0
+    for line in data:
+        for word in line:
+            if word in mapping:
+                continue
+            else:
+                mapping[word] = counter
+                counter += 1
+    with open(name + '.pkl', 'wb') as f:
+        pickle.dump(mapping, f, pickle.HIGHEST_PROTOCOL)
 
 def main():
     dataset = k_fold(10,'develop.csv')
