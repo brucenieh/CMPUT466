@@ -1,4 +1,7 @@
 import tensorflow as tf
+from tensorflow.keras.layers import SimpleRNN, Dense
+from tensorflow.keras import Sequential
+import numpy as np
 
 class RNN:
     """Recurrent Neural Network model for review prediction
@@ -8,33 +11,32 @@ class RNN:
     """
     def __init__(self):
         self.model = None
+        self.sequence_length = 50
+        self.mapping = {}
+        self.vocab_size = None
         pass
     
-    def _get_model(self, data=None):
+    def _get_model(self):
         """Get an instance of the RNN model
         
         Creates a new instance if there isn't one available
-        
-        Args:
-            data: List of strings for generating vocabulary
         
         Returns:
             Tensorflow RNN model
         """
         if self.model == None:
-            # TODO: Decide TextVectorization layer arguments
-            vectorize_layer = TextVectorization()
-            vectorize_layer.adapt(data)
-            # TODO: Determine layer size
-            # TODO: Determine layers
-            # TODO: Determine Embedding layer argumenets
-            # TODO: Determine output layer arguments
+            embedding_layer = tf.keras.layers.Embedding(
+                input_dim=self.vocab_size,
+                output_dim=100,
+                input_length=self.sequence_length,
+                trainable=True)
+            rnn_layer = SimpleRNN(1000, activation='relu')
             self.model = tf.keras.Sequential([
-                vectorize_layer,
-                tf.keras.layers.Embedding()
-                tf.keras.layers.Bidirectional(tf.keras.layers.SimpleRNN(64)),
-                tf.keras.layers.Dense(64, activation='relu')
-                tf.keras.layers.Dense(len(vectorize_layer.get_vocabulary()))
+                embedding_layer,
+                rnn_layer,
+                Dense(100, activation='relu'),
+                Dense(100, activation='relu'),
+                Dense(self.vocab_size, activation='softmax')
             ])
         return self.model
 
@@ -49,9 +51,28 @@ class RNN:
             (features, labels) tuple containing the feature set
             and the corresponding label set
         """
-        # x should be the 'text' field minus the last word
-        # y should be the last word
-        pass
+        # Generate vocabulary. Code written by Kean
+        counter = 0
+        for line in data:
+            for word in line:
+                if word in self.mapping:
+                    continue
+                else:
+                    self.mapping[word] = counter
+                    counter += 1
+        self.vocab_size = len(self.mapping)
+        X_train = []
+        Y_train = []
+        for line in data:
+            if len(line) < self.sequence_length + 1:
+                continue
+            X_train.append([self.mapping[word] for word in line[:self.sequence_length]])
+            new_y = np.zeros(self.vocab_size)
+            new_y[self.mapping[line[self.sequence_length]]] = 1
+            Y_train.append(new_y)
+        X_train = np.array(X_train)
+        Y_train = np.array(Y_train)
+        return X_train, Y_train
     
     def train(self, data):
         """
@@ -60,10 +81,11 @@ class RNN:
         Args:
             data: Pandas DataFrame containing the train dataset
         """
-        x_train, y_train = self._get_x_y(data)
-        model = self._get_model(data['text'].tolist())
-        model.compile(metrics=["accuracy"])
-        model.fit(x_train, y_train, epochs=100)
+        X_train, Y_train = self._get_x_y(data)
+        model = self._get_model()
+        model.compile(loss='categorical_crossentropy', metrics=['acc'], optimizer='adam')
+        model.summary()
+        model.fit(X_train, Y_train, epochs=100, verbose=1)
         self.model = model
     
     def predict(self, data):
