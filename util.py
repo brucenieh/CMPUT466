@@ -1,6 +1,7 @@
 import csv
 import pandas
 import pickle
+import numpy as np
 
 class Training_data():
     """data structure to store the training data
@@ -89,6 +90,42 @@ def evaluate(model,training_data,testing_data):
         else:
             perplexity += 1/0.000001
     
+    accuracy = accuracy/len(testing_data)
+    perplexity = perplexity/len(testing_data)
+
+    return accuracy,perplexity
+
+def evaluate_ANN(model,testing_data,mapping):
+    accuracy = 0
+    perplexity = 0
+
+    for test in testing_data:
+        if len(test) < model.sentence_length:
+            continue
+        sentence = test[:model.sentence_length]
+        target = test[model.sentence_length]
+        try:
+            prob_distrib = model.predict(sentence)
+            if len(prob_distrib) == 0:
+                perplexity += 1/0.000001
+                continue
+        except Exception as e:
+            print('model predicting failed\n', e)
+            exit()
+        if len(prob_distrib) != len(mapping):
+            exit()
+        try:
+            correct = mapping[target]
+        except:
+            perplexity += 1/0.000001
+
+        # Update accuracy
+        if np.argmax(prob_distrib) == correct:
+            accuracy += 1
+
+        # Update perplexity
+        perplexity += 1/prob_distrib[correct]
+
     accuracy = accuracy/len(testing_data)
     perplexity = perplexity/len(testing_data)
 

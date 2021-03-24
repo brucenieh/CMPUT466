@@ -96,6 +96,14 @@ class ANN:
             text (str): sentence from testing data to predict next word for
         """
         self.model = load_model('./ANN/ANN_model/')
-        print(len(text))
-        # yhat = self.model.predict(text)
-        # print(yhat)
+        if len(text) < self.sentence_length:
+            print("Sentence too short!")
+            return 0
+        try:
+            sentence = [self.mapping[word] for word in text]
+        except:
+            return []
+        sentence = np.asarray(sentence).reshape((1, self.sentence_length))
+        yhat = self.model.predict(sentence)
+
+        return yhat.reshape(-1)
