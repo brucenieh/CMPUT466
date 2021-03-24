@@ -9,10 +9,12 @@ class RNN:
     Attributes:
         model: Tensorflow RNN model
     """
-    def __init__(self):
+    def __init__(self, sequence_length=50):
         self.model = None
-        self.sequence_length = 50
+        self.sequence_length = sequence_length
         self.mapping = {}
+        self.inverse_mapping = {}
+        self.epochs = 50
         self.vocab_size = None
         pass
     
@@ -30,10 +32,12 @@ class RNN:
                 output_dim=100,
                 input_length=self.sequence_length,
                 trainable=True)
+            # (batch_size, sequence_length, features)
             rnn_layer = SimpleRNN(1000, activation='relu')
             self.model = tf.keras.Sequential([
                 embedding_layer,
                 rnn_layer,
+                # batch_size, 1000
                 Dense(100, activation='relu'),
                 Dense(100, activation='relu'),
                 Dense(self.vocab_size, activation='softmax')
@@ -59,6 +63,7 @@ class RNN:
                     continue
                 else:
                     self.mapping[word] = counter
+                    self.inverse_mapping[counter] = word
                     counter += 1
         self.vocab_size = len(self.mapping)
         X_train = []
@@ -85,10 +90,10 @@ class RNN:
         model = self._get_model()
         model.compile(loss='categorical_crossentropy', metrics=['acc'], optimizer='adam')
         model.summary()
-        model.fit(X_train, Y_train, epochs=100, verbose=1)
+        model.fit(X_train, Y_train, epochs=self.epochs, verbose=1)
         self.model = model
     
-    def predict(self, data):
+    def predict(self, text):
         """
         Perform testing on the RNN model
         
@@ -98,5 +103,13 @@ class RNN:
         Returns:
             Prediction accuracy on test data
         """
-        pass
-        
+        if len(text) < self.sequence_length:
+            print("Sentence too short!")
+            return 0
+        try:
+            sentence = [self.mapping[word] for word in text]
+        except:
+            return []
+        sentence = np.asarray(sentence).reshape((1, self.sequence_length))
+        yhat = self.model.predict(sentence)
+        return self.inverse_mapping[np.argmax(yhat)]
