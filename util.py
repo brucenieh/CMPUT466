@@ -1,5 +1,7 @@
 import csv
 import pandas
+import pickle
+import numpy as np
 
 class Training_data():
     """data structure to store the training data
@@ -9,6 +11,17 @@ class Training_data():
     def __init__(self):
         self.validation_set = None
         self.training_set = None
+
+def read_data(path):
+    """return dataset as a list of
+    Args:
+        path (str): path to the data file in csv format
+    """
+    # Read csv file, convert 'text' column from string to list
+    df = pandas.read_csv(path, converters={'text': eval})
+    # Convert the Series object to a python list
+    data = df['text'].tolist()
+    return data
 
 def k_fold(k,path):
     """split dataset into k folds for cross validation
@@ -33,26 +46,98 @@ def k_fold(k,path):
     return dataset
 
 def evaluate(model,training_data,testing_data):
+    """returns the accuracy and perplexity of the model
+    Args:
+        model (Model): Model to be evaluated
+        training_data (Training_data): Data for the model to be trained on
+        testing_data (list(list(str))): A list of sentences
+    Returns:
+        float: Accuracy of the model
+        float: Perplexity of the model
+    """
     accuracy = 0
+    perplexity = 0
     try:
         model.train(training_data)
     except Exception as e:
         print('model training failed\n', e)
+        exit()
     
     for test in testing_data:
-        sentence = test[0:-3]
-        target = test[-3]
+        sentence = test[0:-2]
+        target = test[-2]
         try:
-            prediction = model.predict(sentence)[0]
+            prediction,prob_distrib = model.predict(sentence)
         except Exception as e:
             print('model predicting failed\n', e)
+            exit()
         
-        if prediction == target:
+        # Update accuracy
+        if prediction[0] == target:
             accuracy += 1
+        
+        # Update perplexity
+        if prob_distrib:
+            if target in prob_distrib.keys():
+                perplexity += 1/prob_distrib[target]
+            else:
+                perplexity += 1/prob_distrib['<UNK>']
+        else:
+            perplexity += 1/0.000001
     
     accuracy = accuracy/len(testing_data)
+    perplexity = perplexity/len(testing_data)
 
-    return accuracy
+    return accuracy,perplexity
+
+def evaluate_RNN(model,testing_data,mapping):
+    accuracy = 0
+    perplexity = 0
+
+    for test in testing_data:
+        if len(test) < model.sentence_length:
+            continue
+        sentence = test[:model.sentence_length]
+        target = test[model.sentence_length]
+        try:
+            prob_distrib = model.predict(sentence)
+            if len(prob_distrib) == 0:
+                perplexity += 1/0.000001
+                continue
+        except Exception as e:
+            print('model predicting failed\n', e)
+            exit()
+        if len(prob_distrib) != len(mapping):
+            exit()
+        try:
+            correct = mapping[target]
+        except:
+            perplexity += 1/0.000001
+
+        # Update accuracy
+        if np.argmax(prob_distrib) == correct:
+            accuracy += 1
+
+        # Update perplexity
+        perplexity += 1/prob_distrib[correct]
+
+    accuracy = accuracy/len(testing_data)
+    perplexity = perplexity/len(testing_data)
+
+    return accuracy,perplexity
+
+def build_vocab(data,name):
+    mapping = {}
+    counter = 0
+    for line in data:
+        for word in line:
+            if word in mapping:
+                continue
+            else:
+                mapping[word] = counter
+                counter += 1
+    with open(name + '.pkl', 'wb') as f:
+        pickle.dump(mapping, f, pickle.HIGHEST_PROTOCOL)
 
 def main():
     dataset = k_fold(10,'develop.csv')

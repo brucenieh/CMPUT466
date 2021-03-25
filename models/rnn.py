@@ -89,9 +89,10 @@ class RNN:
         X_train, Y_train = self._get_x_y(data)
         model = self._get_model()
         model.compile(loss='categorical_crossentropy', metrics=['acc'], optimizer='adam')
-        model.summary()
-        model.fit(X_train, Y_train, epochs=self.epochs, verbose=1)
+        # model.summary()
+        self.hist = model.fit(X_train, Y_train, epochs=self.epochs, verbose=1)
         self.model = model
+
     
     def predict(self, text):
         """
