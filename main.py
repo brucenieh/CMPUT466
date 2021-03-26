@@ -1,7 +1,7 @@
 import raw.readingfiles as readfiles
 from models.ngrams import Ngrams
 from models.ANN import ANN
-from util import evaluate, k_fold,read_data
+from util import evaluate, k_fold,read_data, evaluate_ANN
 
 if __name__ == '__main__':
     # readfiles.make_datasets()
@@ -28,7 +28,8 @@ if __name__ == '__main__':
     # print(accuracy,perplexity)
 
 
-    ANN_model = ANN()
+    ANN_model = ANN(epoch=50)
     # print(training_set[:5])
-    ANN_model.train(training_set[:5000])
+    ANN_model.train(training_set)
+    print(evaluate_ANN(ANN_model, testing_set[-100:], ANN_model.mapping))
     # ANN_model.train(["abc"])
