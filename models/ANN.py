@@ -3,26 +3,30 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, Embedding, Flatten, GRU
 from tensorflow.keras.models import Sequential, load_model
+from tensorflow.keras.optimizers import Adam
 from sklearn.feature_extraction.text import CountVectorizer
 import os
 
 class ANN:
-    def __init__(self, sentence_length=50):
+    def __init__(self, sentence_length=50, epoch=10, lr=0.001):
         """Our ANN model is a simple feed-forward neural network and is based on
         Keras' Sequential model.
         """
         with open('vocab.pkl', 'rb') as f:
             self.mapping = pickle.load(f)
         vocab = len(self.mapping)
+        self.epoch = epoch
 
         self.sentence_length = sentence_length
         self.model = Sequential()
         self.model.add(Embedding(vocab, 100, input_length=sentence_length, trainable=True))
         self.model.add(Flatten())
-        self.model.add(Dense(2500, activation="relu"))
-        self.model.add(Dense(250, activation="relu"))
+        self.model.add(Dense(1000, activation="relu"))
+        self.model.add(Dense(100, activation="relu"))
         self.model.add(Dense(vocab, activation='softmax'))
-        self.model.compile(loss='categorical_crossentropy', metrics=['acc'], optimizer='adam')
+
+        opt = Adam(learning_rate=lr)
+        self.model.compile(loss='categorical_crossentropy', metrics=['acc'], optimizer=opt)
         self.model.summary()
 
     def train(self, data):
@@ -77,7 +81,7 @@ class ANN:
         # cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath='./ANN/',
         #                                                  save_weights_only=True,
         #                                                  verbose=1)
-        self.model.fit(X_train, Y_train, epochs=1, verbose=1)
+        self.model.fit(X_train, Y_train, epochs=self.epoch, verbose=1)
         self.model.save('./ANN/ANN_model')
         #     print(vector)
         # print(mapping)
@@ -88,14 +92,14 @@ class ANN:
         #     pickle.dump(self.model, f, pickle.HIGHEST_PROTOCOL) 
         
         return
-
+    # @tf.function(experimental_relax_shapes=True)
     def predict(self, text):
         """Predicts the next word based on our model.
 
         Args:
             text (str): sentence from testing data to predict next word for
         """
-        self.model = load_model('./ANN/ANN_model/')
+        self.model = load_model('./ANN/ANN_model')
         if len(text) < self.sentence_length:
             print("Sentence too short!")
             return 0
@@ -104,6 +108,7 @@ class ANN:
         except:
             return []
         sentence = np.asarray(sentence).reshape((1, self.sentence_length))
+        # tf.compat.v1.disable_eager_execution()
         yhat = self.model.predict(sentence)
 
         return yhat.reshape(-1)

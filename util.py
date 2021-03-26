@@ -113,18 +113,19 @@ def evaluate_ANN(model,testing_data,mapping):
             print('model predicting failed\n', e)
             exit()
         if len(prob_distrib) != len(mapping):
+            print(len(prob_distrib),len(mapping))
             exit()
         try:
-            correct = mapping[target]
+            correct_index = mapping[target]
+            print(np.argmax(prob_distrib), prob_distrib[correct_index])
         except:
             perplexity += 1/0.000001
 
         # Update accuracy
-        if np.argmax(prob_distrib) == correct:
+        if np.argmax(prob_distrib) == correct_index:
             accuracy += 1
-
         # Update perplexity
-        perplexity += 1/prob_distrib[correct]
+        perplexity += 1/prob_distrib[correct_index]
 
     accuracy = accuracy/len(testing_data)
     perplexity = perplexity/len(testing_data)
