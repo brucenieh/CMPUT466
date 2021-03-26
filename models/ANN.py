@@ -82,7 +82,7 @@ class ANN:
         # cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath='./ANN/',
         #                                                  save_weights_only=True,
         #                                                  verbose=1)
-        self.model.partial_fit(X_train, Y_train, batch_size=self.batch_size, verbose=1)
+        self.model.train_on_batch(X_train, Y_train)
 
     def save(self):
         self.model.save('./ANN/ANN_model')
