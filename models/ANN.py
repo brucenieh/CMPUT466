@@ -8,22 +8,23 @@ from sklearn.feature_extraction.text import CountVectorizer
 import os
 
 class ANN:
-    def __init__(self, sentence_length=50, epoch=10, lr=0.001):
+    def __init__(self, sentence_length=50, batch_size=32, epoch=10, lr=0.001):
         """Our ANN model is a simple feed-forward neural network and is based on
         Keras' Sequential model.
         """
         with open('vocab.pkl', 'rb') as f:
             self.mapping = pickle.load(f)
-        vocab = len(self.mapping)
+        self.vocab = len(self.mapping)
         self.epoch = epoch
+        self.batch_size = batch_size
 
         self.sentence_length = sentence_length
         self.model = Sequential()
-        self.model.add(Embedding(vocab, 100, input_length=sentence_length, trainable=True))
+        self.model.add(Embedding(self.vocab, 100, input_length=sentence_length, trainable=True))
         self.model.add(Flatten())
         self.model.add(Dense(1000, activation="relu"))
         self.model.add(Dense(100, activation="relu"))
-        self.model.add(Dense(vocab, activation='softmax'))
+        self.model.add(Dense(self.vocab, activation='softmax'))
 
         opt = Adam(learning_rate=lr)
         self.model.compile(loss='categorical_crossentropy', metrics=['acc'], optimizer=opt)
@@ -63,7 +64,7 @@ class ANN:
         for line in data:
             if len(line) < self.sentence_length + 1:
                 continue
-            vector = np.zeros(len(self.mapping))
+            vector = np.zeros(self.vocab)
             y_word = line[self.sentence_length]
             vector[self.mapping[y_word]] = 1
             # for word in line:
@@ -81,7 +82,9 @@ class ANN:
         # cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath='./ANN/',
         #                                                  save_weights_only=True,
         #                                                  verbose=1)
-        self.model.fit(X_train, Y_train, epochs=self.epoch, verbose=1)
+        self.model.partial_fit(X_train, Y_train, batch_size=self.batch_size, verbose=1)
+
+    def save(self):
         self.model.save('./ANN/ANN_model')
         #     print(vector)
         # print(mapping)
