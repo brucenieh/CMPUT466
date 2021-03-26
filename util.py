@@ -138,6 +138,7 @@ def build_vocab(data,name):
                 counter += 1
     with open(name + '.pkl', 'wb') as f:
         pickle.dump(mapping, f, pickle.HIGHEST_PROTOCOL)
+    return mapping
 
 def main():
     dataset = k_fold(10,'develop.csv')
