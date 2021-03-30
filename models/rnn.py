@@ -2,6 +2,7 @@ import tensorflow as tf
 from tensorflow.keras.layers import SimpleRNN, Dense
 from tensorflow.keras import Sequential
 from tensorflow.keras.utils import Sequence
+from tensorflow.keras.models import load_model
 import numpy as np
 import util
 
@@ -46,7 +47,7 @@ class RNN:
         self.sequence_length = sequence_length
         self.mapping = {}
         self.inverse_mapping = {}
-        self.epochs = 100
+        self.epochs = 40
         self.vocab_size = None
         pass
         
@@ -66,18 +67,40 @@ class RNN:
             Tensorflow RNN model
         """
         if self.model == None:
+            print("Reading embeddings")
+            hits = 0
+            misses = 0
+            embeddings_index = {}
+            with open('glove.6B.100d.txt') as f:
+                for line in f:
+                    word, coefs = line.split(maxsplit=1)
+                    coefs = np.fromstring(coefs, "f", sep=" ")
+                    embeddings_index[word] = coefs
+            print("Building embedding matrix")
+            embedding_matrix = np.zeros((len(self.mapping),100))
+            for word, i in self.mapping.items():
+                embedding_vector = embeddings_index.get(word)
+                if embedding_vector is not None:
+                    embedding_matrix[i] = embedding_vector
+                    hits += 1
+                else:
+                    misses += 1
+            print("Converted %d words (%d misses)" % (hits, misses))
+            
+            
+            
             embedding_layer = tf.keras.layers.Embedding(
                 input_dim=self.vocab_size,
                 output_dim=100,
                 input_length=self.sequence_length,
-                trainable=True)
+                embeddings_initializer=tf.keras.initializers.Constant(embedding_matrix),
+                trainable=False)
             # (batch_size, sequence_length, features)
             rnn_layer = SimpleRNN(1000, activation='relu')
             self.model = tf.keras.Sequential([
                 embedding_layer,
                 rnn_layer,
                 # batch_size, 1000
-                Dense(100, activation='relu'),
                 Dense(100, activation='relu'),
                 Dense(self.vocab_size, activation='softmax')
             ])
@@ -126,4 +149,5 @@ class RNN:
             return []
         sentence = np.asarray(sentence).reshape((1, self.sequence_length))
         yhat = self.model.predict(sentence)
-        return self.inverse_mapping[np.argmax(yhat)]
+        return yhat
+        # return self.inverse_mapping[np.argmax(yhat)]

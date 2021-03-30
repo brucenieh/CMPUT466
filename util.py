@@ -95,10 +95,10 @@ def evaluate_RNN(model,testing_data,mapping):
     perplexity = 0
 
     for test in testing_data:
-        if len(test) < model.sentence_length:
+        if len(test) < model.sequence_length:
             continue
-        sentence = test[:model.sentence_length]
-        target = test[model.sentence_length]
+        sentence = test[:model.sequence_length]
+        target = test[model.sequence_length]
         try:
             prob_distrib = model.predict(sentence)
             if len(prob_distrib) == 0:

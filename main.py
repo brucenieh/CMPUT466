@@ -1,11 +1,13 @@
 import raw.readingfiles as readfiles
 from models.rnn import RNN
-from util import evaluate, k_fold,read_data
+from util import evaluate, k_fold,read_data, evaluate_RNN
+import util
 
 if __name__ == '__main__':
     # readfiles.make_datasets()
     data_set = k_fold(10, 'training_data.csv')
     training_set = read_data('training_data.csv')
+    testing_set = read_data('testing_data.csv')
 
 
     # ngrams_model.train(data_set[0].training_set)
@@ -25,9 +27,9 @@ if __name__ == '__main__':
     # accuracy,perplexity = evaluate(ngrams_model, training_set, testing_set)
     # print(accuracy,perplexity)
 
-
+    util.build_vocab(training_set, 'vocab')
     RNN_model = RNN()
     # print(training_set[:5])
     RNN_model.train(training_set)
-    # print(evaluate_ANN(ANN_model, testing_set[-100:], ANN_model.mapping))
+    print(evaluate_RNN(RNN_model, testing_set[-100:], RNN_model.mapping))
     # ANN_model.train(["abc"])
