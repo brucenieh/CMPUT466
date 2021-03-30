@@ -90,41 +90,19 @@ def evaluate(model,training_data,testing_data):
 
     return accuracy,perplexity
 
-def evaluate_RNN(model,testing_data,mapping):
+def evaluate_RNN(model,testing_data):
     accuracy = 0
     perplexity = 0
-
-    for test in testing_data:
-        if len(test) < model.sequence_length:
-            continue
-        sentence = test[:model.sequence_length]
-        target = test[model.sequence_length]
-        try:
-            prob_distrib = model.predict(sentence)
-            if len(prob_distrib) == 0:
-                perplexity += 1/0.000001
-                continue
-        except Exception as e:
-            print('model predicting failed\n', e)
-            exit()
-        if len(prob_distrib) != len(mapping):
-            exit()
-        try:
-            correct = mapping[target]
-        except:
-            perplexity += 1/0.000001
-
-        # Update accuracy
-        if np.argmax(prob_distrib) == correct:
-            accuracy += 1
-
-        # Update perplexity
-        perplexity += 1/prob_distrib[correct]
-
-    accuracy = accuracy/len(testing_data)
-    perplexity = perplexity/len(testing_data)
-
-    return accuracy,perplexity
+    size = 0
+    
+    for i in range(0, len(testing_data), model.batch_size):
+        print("Batch", i / model.batch_size, "of", np.ceil(len(testing_data) / model.batch_size))
+        acc, perp, n = model.predict(testing_data[i:i + model.batch_size])
+        accuracy = accuracy + acc * n
+        perplexity = perplexity + perp * n
+        size = size + n
+    
+    return accuracy / size, perplexity / size
 
 def build_vocab(data,name):
     mapping = {}

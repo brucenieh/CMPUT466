@@ -5,6 +5,7 @@ from tensorflow.keras.utils import Sequence
 from tensorflow.keras.models import load_model
 import numpy as np
 import util
+import pickle
 
 class BatchSequence(Sequence):
     """Sequence class for loading training data
@@ -47,8 +48,11 @@ class RNN:
         self.sequence_length = sequence_length
         self.mapping = {}
         self.inverse_mapping = {}
-        self.epochs = 40
-        self.vocab_size = None
+        self.epochs = 50
+        self.batch_size = 100
+        with open('vocab.pkl', 'rb') as f:
+            self.mapping = pickle.load(f)
+        self.vocab_size = len(self.mapping)
         pass
         
     def mygenerator(self, data):
@@ -93,8 +97,8 @@ class RNN:
                 input_dim=self.vocab_size,
                 output_dim=100,
                 input_length=self.sequence_length,
-                embeddings_initializer=tf.keras.initializers.Constant(embedding_matrix),
-                trainable=False)
+#                embeddings_initializer=tf.keras.initializers.Constant(embedding_matrix),
+                trainable=True)
             # (batch_size, sequence_length, features)
             rnn_layer = SimpleRNN(1000, activation='relu')
             self.model = tf.keras.Sequential([
@@ -120,7 +124,7 @@ class RNN:
         model = self._get_model()
         model.summary()
         sequence = BatchSequence(data,
-            self.mapping, self.vocab_size, self.sequence_length, 100)
+            self.mapping, self.vocab_size, self.sequence_length, self.batch_size)
         self.hist = model.fit(sequence, epochs=self.epochs, verbose=1)
         self.model = model
         self.save()
@@ -129,25 +133,41 @@ class RNN:
         self.model.save('./RNN/RNN_model')
         return
     
-    def predict(self, text):
+    def predict(self, data):
         """
         Perform testing on the RNN model
         
         Args:
-            data: Pandas DataFrame containing the test dataset
+            data: List of sequences containing the test dataset
             
         Returns:
             Prediction accuracy on test data
         """
-        self.model = load_model('./RNN/RNN_model')
-        if len(text) < self.sequence_length:
-            print("Sentence too short!")
-            return 0
-        try:
-            sentence = [self.mapping[word] for word in text]
-        except:
-            return []
-        sentence = np.asarray(sentence).reshape((1, self.sequence_length))
-        yhat = self.model.predict(sentence)
-        return yhat
+        if (self.model == None):
+            self.model = load_model('./RNN/RNN_model')
+        perplexity = 0
+        accuracy = 0
+        
+        X_test = []
+        Y_test = []
+        for line in data:
+            if len(line) < self.sequence_length:
+                continue
+            try:
+                X_mapping = [self.mapping[word] for word in line[:self.sequence_length]]
+                Y_mapping = self.mapping[line[self.sequence_length]]
+                X_test.append(X_mapping)
+                Y_test.append(Y_mapping)
+            except:
+                perplexity += 1/0.000001
+        X_test = np.array(X_test)
+        print(len(X_test), "features suitable for prediction out of", len(data))
+        if (len(X_test) == 0):
+            return 0, 0, 0
+        model_output = self.model.predict_on_batch(X_test)
+        accuracy = np.sum(np.argmax(model_output, axis=1) == Y_test) / len(X_test)
+        normalized = model_output / np.sum(model_output, axis=1)[:,None]
+        perplexity = perplexity + np.sum(1 / normalized[np.arange(len(X_test)),Y_test])
+        perplexity = perplexity / len(X_test)
+        return accuracy, perplexity, len(X_test)
         # return self.inverse_mapping[np.argmax(yhat)]

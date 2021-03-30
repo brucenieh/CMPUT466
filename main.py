@@ -31,5 +31,5 @@ if __name__ == '__main__':
     RNN_model = RNN()
     # print(training_set[:5])
     RNN_model.train(training_set)
-    print(evaluate_RNN(RNN_model, testing_set[-100:], RNN_model.mapping))
+    print(evaluate_RNN(RNN_model, testing_set))
     # ANN_model.train(["abc"])
