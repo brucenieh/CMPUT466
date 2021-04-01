@@ -2,11 +2,7 @@ import raw.readingfiles as readfiles
 import pickle, time
 from models.ngrams import Ngrams
 from models.ANN import ANN
-<<<<<<< HEAD
 from util import build_vocab, evaluate, k_fold, read_data, evaluate_ANN
-=======
-from util import evaluate, k_fold,read_data, evaluate_ANN
->>>>>>> 1496a44f7b530051f05e5f16128feabcabc8f169
 
 if __name__ == '__main__':
     # readfiles.make_datasets()
