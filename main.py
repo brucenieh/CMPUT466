@@ -7,8 +7,8 @@ from util import build_vocab, evaluate, k_fold, read_data, evaluate_ANN
 if __name__ == '__main__':
     # readfiles.make_datasets()
     data_set = k_fold(10, 'training_data.csv')
-    training_set = read_data('training_data.csv')
-    testing_set = read_data('testing_data.csv')
+    # training_set = read_data('training_data.csv')
+    # testing_set = read_data('testing_data.csv')
 
 
     # ngrams_model.train(data_set[0].training_set)
@@ -122,6 +122,6 @@ if __name__ == '__main__':
     # ANN_model.save()
     # print(ANN_model.mapping['test'])
     # print(training_set[:5])
-    ANN_model.train(training_set)
-    print(evaluate_ANN(ANN_model, testing_set[-100:], ANN_model.mapping))
+    # ANN_model.train(training_set)
+    # print(evaluate_ANN(ANN_model, testing_set[-100:], ANN_model.mapping))
     # ANN_model.train(["abc"])

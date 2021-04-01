@@ -1,16 +1,12 @@
-import pickle
+import pickle, random
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, Embedding, Flatten, GRU
 from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.optimizers import Adam
 from sklearn.feature_extraction.text import CountVectorizer
-<<<<<<< HEAD
-import os, random
-=======
 from tensorflow.keras.utils import Sequence
 import os
->>>>>>> 1496a44f7b530051f05e5f16128feabcabc8f169
 
 class BatchSequence(Sequence):
     """Sequence class for loading training data
@@ -67,7 +63,7 @@ class ANN:
         self.model.add(Flatten())
         self.model.add(Dense(1000, activation="relu"))
         self.model.add(Dense(100, activation="relu"))
-        self.model.add(Dense(vocab, activation='softmax'))
+        self.model.add(Dense(self.vocab, activation='softmax'))
 
         opt = Adam(learning_rate=lr)
         self.model.compile(loss='categorical_crossentropy', metrics=['acc'],
