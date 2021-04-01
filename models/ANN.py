@@ -54,7 +54,7 @@ class ANN:
             self.mapping = pickle.load(f)
         self.vocab = len(self.mapping)
         self.epoch = epoch
-        self.batch_size = 100
+        self.batch_size = batch_size
 
         self.sentence_length = sentence_length
         self.model = Sequential()
