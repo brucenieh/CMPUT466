@@ -98,37 +98,60 @@ def evaluate(model,training_data,testing_data):
 def evaluate_ANN(model,testing_data,mapping):
     accuracy = 0
     perplexity = 0
-
+    filtered_data = []
+    targets = []
     for test in testing_data:
-        if len(test) < model.sentence_length:
+        if len(test) < model.sentence_length + 1:
             continue
-        sentence = test[:model.sentence_length]
-        target = test[model.sentence_length]
-        try:
-            prob_distrib = model.predict(sentence)
-            if len(prob_distrib) == 0:
-                perplexity += 1/0.000001
-                continue
-        except Exception as e:
-            print('model predicting failed\n', e)
-            exit()
-        if len(prob_distrib) != len(mapping):
-            print(len(prob_distrib),len(mapping))
-            exit()
+        filtered_data.append(test[:model.sentence_length])
+        targets.append(test[model.sentence_length])
+    filtered_data = np.asarray(filtered_data)
+
+    prob_distrib = model.predict(filtered_data)
+
+    for i in range(len(prob_distrib)):
+        target = targets[i]
         try:
             correct_index = mapping[target]
-            print(np.argmax(prob_distrib), prob_distrib[correct_index])
         except:
             perplexity += 1/0.000001
 
         # Update accuracy
-        if np.argmax(prob_distrib) == correct_index:
+        if np.argmax(prob_distrib[i]) == correct_index:
             accuracy += 1
         # Update perplexity
-        perplexity += 1/prob_distrib[correct_index]
+        perplexity += 1/prob_distrib[i][correct_index]
 
-    accuracy = accuracy/len(testing_data)
-    perplexity = perplexity/len(testing_data)
+    # for test in testing_data:
+    #     if len(test) < model.sentence_length:
+    #         continue
+    #     sentence = test[:model.sentence_length]
+    #     target = test[model.sentence_length]
+    #     try:
+    #         prob_distrib = model.predict(sentence)
+    #         if len(prob_distrib) == 0:
+    #             perplexity += 1/0.000001
+    #             continue
+    #     except Exception as e:
+    #         print('model predicting failed\n', e)
+    #         exit()
+    #     if len(prob_distrib) != len(mapping):
+    #         print(len(prob_distrib),len(mapping))
+    #         exit()
+    #     try:
+    #         correct_index = mapping[target]
+    #         print(np.argmax(prob_distrib), prob_distrib[correct_index])
+    #     except:
+    #         perplexity += 1/0.000001
+
+    #     # Update accuracy
+    #     if np.argmax(prob_distrib) == correct_index:
+    #         accuracy += 1
+    #     # Update perplexity
+    #     perplexity += 1/prob_distrib[correct_index]
+
+    accuracy = accuracy/len(filtered_data)
+    perplexity = perplexity/len(filtered_data)
 
     return accuracy,perplexity
 
