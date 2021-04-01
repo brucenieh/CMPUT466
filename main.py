@@ -2,13 +2,17 @@ import raw.readingfiles as readfiles
 import pickle, time
 from models.ngrams import Ngrams
 from models.ANN import ANN
+<<<<<<< HEAD
 from util import build_vocab, evaluate, k_fold, read_data, evaluate_ANN
+=======
+from util import evaluate, k_fold,read_data, evaluate_ANN
+>>>>>>> 1496a44f7b530051f05e5f16128feabcabc8f169
 
 if __name__ == '__main__':
     # readfiles.make_datasets()
     data_set = k_fold(10, 'training_data.csv')
-    # training_set = read_data('training_data.csv')
-    # testing_set = read_data('testing_data.csv')
+    training_set = read_data('training_data.csv')
+    testing_set = read_data('testing_data.csv')
 
 
     # ngrams_model.train(data_set[0].training_set)
@@ -122,9 +126,6 @@ if __name__ == '__main__':
     # ANN_model.save()
     # print(ANN_model.mapping['test'])
     # print(training_set[:5])
-    # build_vocab(data_set[0].training_set, 'vocab')
-    # ANN_model.train(data_set[0].training_set[:5000])
-    # print(data_set[0].validation_set)
-    # for i in range(10):
-    #     ANN_model.predict(data_set[0].validation_set[i][:50])
+    ANN_model.train(training_set)
+    print(evaluate_ANN(ANN_model, testing_set[-100:], ANN_model.mapping))
     # ANN_model.train(["abc"])
