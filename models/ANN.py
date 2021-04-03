@@ -41,7 +41,15 @@ class BatchSequence(Sequence):
 class ANN:
     def __init__(self, sentence_length=50, batch_size=1000, epoch=10, lr=0.001):
         """Our ANN model is a simple feed-forward neural network and is based on
-        Keras' Sequential model.
+        Keras' Sequential model. Mapping is the model's vocabulary, which is a
+        dictionary with key-value, 'word': incrementing index. Mapping is 
+        indexed based on training data. Example:
+        self.mapping = {
+            'this': 0,
+            'is' : 1,
+            'all': 2,
+            'vocab': 3
+        }
 
         Args:
             sentence_length (int): sentence length to predict
@@ -49,14 +57,16 @@ class ANN:
             epoch (int): epochs to train our model
             lr (float): learning rate for our model
         """
-        # load our pre-built vocabulary mapping from a previously saved pickle
+        # load our pre-built vocabulary mapping from a pickle file
         with open('vocab.pkl', 'rb') as f:
             self.mapping = pickle.load(f)
+        
         self.vocab = len(self.mapping)
         self.epoch = epoch
         self.batch_size = batch_size
-
         self.sentence_length = sentence_length
+
+        # initialize Sequential layer and add layers
         self.model = Sequential()
         self.model.add(Embedding(self.vocab, 100, input_length=sentence_length,
                        trainable=True))
@@ -65,6 +75,7 @@ class ANN:
         self.model.add(Dense(100, activation="relu"))
         self.model.add(Dense(self.vocab, activation='softmax'))
 
+        # initialize optimizer to use specified learning rate
         opt = Adam(learning_rate=lr)
         self.model.compile(loss='categorical_crossentropy', metrics=['acc'],
                            optimizer=opt)
@@ -85,106 +96,83 @@ class ANN:
             yield data[i:i + batch_size]
 
     def train(self, data):
-        """Preprocesses training data and trains our model.
+        """Preprocesses training data and trains our model by batch. Our X_train
+        is a Numpy array of size (batch_size, 50), containing the first 50 words
+        of each review (represented as index of mapping). Our Y_train is a Numpy
+        array of size (batch_size, vocab_size), containing the 51st word of each
+        review (represented as one-hot vector of the whole vocab). 
 
         Args:
             data (list of str): training data containing movie reviews
         """
-        # mapping = {}
-        # counter = 0
-        # for line in data:
-        #     for word in line:
-        #         if word in mapping:
-        #             continue
-        #         else:
-        #             mapping[word] = counter
-        #             counter += 1
-        # print("###################\n",os.getcwd())
-        # with open('vocab.pkl', 'rb') as f:
-        #     mapping = pickle.load(f)
-
-        # vocab = len(mapping)
-        # print(vocab)
-
-        # self.model.add(Embedding(vocab, 20, input_length=sentence_length, trainable=True))
-        # self.model.add(Dense(10000, activation="relu"))
-        # self.model.add(Dense(1000, activation="softmax"))
-
-        
-        # X_train = np.ndarray((1, sentence_length + 1))
-        # Y_train = np.ndarray((1, len(mapping)))
-
         dr = self.data_reader(data, self.batch_size)
+        # iterate each batch of data
         for batch_data in dr:
             X_train = []
             Y_train = []
+            # iterate each review in batch of data
             for line in batch_data:
+                # ignore reviews shorter than 51
                 if len(line) < self.sentence_length + 1:
                     continue
-                vector = np.zeros(self.vocab)
-                y_word = line[self.sentence_length]
-                vector[self.mapping[y_word]] = 1
-                # for word in line:
-                #     index = mapping[word]
-                #     vector[index] += 1
+                # select first 50 word and convert to index in vocab mapping
                 sentence = line[:self.sentence_length]
-                sentence = np.array([self.mapping[word] for word in sentence])
+                sentence = np.array([self.mapping[word] for word in sentence]) 
+                # initialize our one-hot vector and marking the correct word as 1
+                y_word = line[self.sentence_length]
+                y_vector = np.zeros(self.vocab)
+                y_vector[self.mapping[y_word]] = 1
                 
                 X_train.append(sentence)
-                Y_train.append(vector)
+                Y_train.append(y_vector)
+            # convert list to Numpy array
             X_train = np.asarray(X_train)
             Y_train = np.asarray(Y_train)
-            # Create a callback that saves the model's weights
-            # cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath='./ANN/',
-            #                                                  save_weights_only=True,
-            #                                                  verbose=1)
+
+            # train on this batch of data for epoch times
             for _ in range(self.epoch):
                 self.model.train_on_batch(X_train, Y_train)
 
     def save(self):
+        """Saves the model locally to the specified directory to save time from
+        retraining whole model.
+        """
         self.model.save('./ANN/ANN_model')
-        return
-        #     print(vector)
-        # print(mapping)
-        # vector = vectorizer.transform([' '.join(data[0])])
-        # print(vector.shape)
-        # training_data
-        # with open('ANN.pkl', 'wb') as f:
-        #     pickle.dump(self.model, f, pickle.HIGHEST_PROTOCOL) 
-        
-        
-    # @tf.function(experimental_relax_shapes=True)
+        return        
+
     def predict(self, text):
-        """Predicts the next word based on our model.
+        """Preprocess testing data and predicts the 51st word. When we see an
+        unknown word (words that are not in vocab), we assign it the index of
+        the previous word. If unknown word is at the start of a sentence, we
+        randomly assign an index to it.
 
         Args:
             text (str): sentence from testing data to predict next word for
+
+        Returns:
+            Numpy array: probablity distribution of all the words in vocab for
+                each review, size of (batch_size, vocab_size) 
         """
-        # self.model = load_model('./ANN/ANN_model')
-        # if len(text) < self.sentence_length:
-        #     print("Sentence too short!")
-        #     return 0
-        # try:
-        #     sentence = [self.mapping[word] for word in text]
-        # except:
-        #     return []
-        # sentence = np.asarray(sentence).reshape((1, self.sentence_length))
-        # # tf.compat.v1.disable_eager_execution()
-        # yhat = self.model.predict(sentence)
         X_test = []
+        # iterate each review
         for line in text:
             sentence = []
+            # iterate each word in a review
             for i in range(self.sentence_length):
+                # try looking up the word in vocab mapping
                 try:
                     sentence.append(self.mapping[line[i]])
+                # if word does not exist in mapping
                 except KeyError:
+                    # if first word is unknown, assign random index, else copy
+                    # index of previous word
                     if len(sentence) == 0:
                         sentence.append(random.randint(0, self.vocab - 1))
                     else:    
                         sentence.append(sentence[-1])
             X_test.append(sentence)
-
+        # convert list to Numpy array
         X_test = np.asarray(X_test)
-        yhat = self.model.predict(X_test)
+        Y_hat = self.model.predict(X_test)
 
-        return yhat
+        return Y_hat
