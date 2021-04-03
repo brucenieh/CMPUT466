@@ -11,9 +11,15 @@ class BatchSequence(Sequence):
     """Sequence class for loading training data
     
     Our training labels can become too large to fit in memory since
-    each training label is a 1-hot vector of size vocab_size. To fix this,
-    we train our model in batches and generate the labels for batches
-    on the fly
+    each training label is a 1-hot vector of size vocab_size. To save memory,
+    we convert the training labels to 1-hot vectors batch-by-batch.
+    
+    Args:
+        data: Training data as a list of words
+        mapping: Dictionary of words to integer mapping
+        vocab_size: Size of the vocabulary
+        sequence_length: Length of a sentence for each features
+        batch_size: Number of features in one batch
     """
     def __init__(self, data, mapping, vocab_size, sequence_length, batch_size):
         self.data = [i for i in data if len(i) > sequence_length]
@@ -42,26 +48,25 @@ class RNN:
     
     Attributes:
         model: Tensorflow RNN model
+        mapping: Dictionary of words to integer mapping
+        vocab_size: Size of the vocabulary
+        sequence_length: Length of a sentence for each features
+        epochs: Passes on training data
+        batch_size: Number of features in one batch
+        learning_rate: Learning rate for our Adam optimizer
     """
-    def __init__(self, sequence_length=50):
+    def __init__(self, epoch=6, learning_rate=0.001, batch_size=100, sequence_length=50):
         self.model = None
         self.sequence_length = sequence_length
         self.mapping = {}
-        self.inverse_mapping = {}
-        self.epochs = 50
-        self.batch_size = 100
+        self.epochs = epoch
+        self.batch_size = batch_size
+        self.learning_rate = learning_rate
+        # Load vocabulary
         with open('vocab.pkl', 'rb') as f:
             self.mapping = pickle.load(f)
         self.vocab_size = len(self.mapping)
-        pass
         
-    def mygenerator(self, data):
-        for line in data:
-            X_train = np.array(line[:-1])
-            Y_train = np.zeros(self.vocab_size)
-            Y_train[line[-1]] = 1
-            yield X_train, Y_train
-
     def _get_model(self):
         """Get an instance of the RNN model
         
@@ -71,17 +76,19 @@ class RNN:
             Tensorflow RNN model
         """
         if self.model == None:
+            # Read glove embeddings
             print("Reading embeddings")
             hits = 0
             misses = 0
             embeddings_index = {}
-            with open('glove.6B.100d.txt') as f:
+            with open('glove.6B.50d.txt', encoding="utf8") as f:
                 for line in f:
                     word, coefs = line.split(maxsplit=1)
                     coefs = np.fromstring(coefs, "f", sep=" ")
                     embeddings_index[word] = coefs
+            # Make an embedding matrix for our vocabulary
             print("Building embedding matrix")
-            embedding_matrix = np.zeros((len(self.mapping),100))
+            embedding_matrix = np.zeros((len(self.mapping),50))
             for word, i in self.mapping.items():
                 embedding_vector = embeddings_index.get(word)
                 if embedding_vector is not None:
@@ -91,14 +98,12 @@ class RNN:
                     misses += 1
             print("Converted %d words (%d misses)" % (hits, misses))
             
-            
-            
             embedding_layer = tf.keras.layers.Embedding(
                 input_dim=self.vocab_size,
-                output_dim=100,
+                output_dim=50,
                 input_length=self.sequence_length,
-#                embeddings_initializer=tf.keras.initializers.Constant(embedding_matrix),
-                trainable=True)
+                embeddings_initializer=tf.keras.initializers.Constant(embedding_matrix),
+                trainable=False)
             # (batch_size, sequence_length, features)
             rnn_layer = SimpleRNN(1000, activation='relu')
             self.model = tf.keras.Sequential([
@@ -108,8 +113,9 @@ class RNN:
                 Dense(100, activation='relu'),
                 Dense(self.vocab_size, activation='softmax')
             ])
+            opt = tf.keras.optimizers.Adam(learning_rate=self.learning_rate)
             self.model.compile(loss='categorical_crossentropy',
-                metrics=['acc'], optimizer='adam')
+                metrics=['acc'], optimizer=opt)
         return self.model
 
     def train(self, data):
@@ -117,16 +123,15 @@ class RNN:
         Perform training on the RNN model
         
         Args:
-            data: Pandas DataFrame containing the train dataset
+            data: List of list of words
         """
-        self.mapping = util.build_vocab(data, 'vocab')
-        self.vocab_size = len(self.mapping)
-        model = self._get_model()
-        model.summary()
+        self.model = self._get_model()
+        # Uncomment this if you want to continue training a saved model
+        # self.model = load_model('./RNN/RNN_model')
+        self.model.summary()
         sequence = BatchSequence(data,
             self.mapping, self.vocab_size, self.sequence_length, self.batch_size)
-        self.hist = model.fit(sequence, epochs=self.epochs, verbose=1)
-        self.model = model
+        self.hist = self.model.fit(sequence, epochs=self.epochs, verbose=1)
         self.save()
 
     def save(self):
@@ -135,18 +140,22 @@ class RNN:
     
     def predict(self, data):
         """
-        Perform testing on the RNN model
+        Perform testing on the RNN model. We return
+        number of predictions as well because some features may
+        not have enough words and are therefore excluded
         
         Args:
-            data: List of sequences containing the test dataset
+            data: List of list of words
             
         Returns:
-            Prediction accuracy on test data
+            Tuple (accuracy, perplexity, num_of_predictions)
         """
         if (self.model == None):
             self.model = load_model('./RNN/RNN_model')
         perplexity = 0
         accuracy = 0
+        
+        smoothing = 1 / len(self.mapping)
         
         X_test = []
         Y_test = []
@@ -165,9 +174,11 @@ class RNN:
         if (len(X_test) == 0):
             return 0, 0, 0
         model_output = self.model.predict_on_batch(X_test)
+        model_output = model_output + smoothing # Smoothing to avoid inf perplexity
         accuracy = np.sum(np.argmax(model_output, axis=1) == Y_test) / len(X_test)
+        # Normalize the output values so they sum up to 1
+        # We need to do this because we added smoothing
         normalized = model_output / np.sum(model_output, axis=1)[:,None]
         perplexity = perplexity + np.sum(1 / normalized[np.arange(len(X_test)),Y_test])
         perplexity = perplexity / len(X_test)
         return accuracy, perplexity, len(X_test)
-        # return self.inverse_mapping[np.argmax(yhat)]
