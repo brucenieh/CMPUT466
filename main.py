@@ -23,5 +23,5 @@ if __name__ == '__main__':
     #         best_n = (n,accuracy)
     
     ngrams_model = Ngrams(3)
-    accuracy,perplexity = evaluate(ngrams_model, training_set, testing_set)
+    accuracy,perplexity = evaluate(ngrams_model, training_set, testing_set, 50)
     print(accuracy,perplexity)

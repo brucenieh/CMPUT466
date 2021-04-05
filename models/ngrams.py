@@ -74,7 +74,7 @@ class Ngrams:
             defaultdict: probability distribution of the n-th word
         """
         # only selects the last n-1 words to search in our model
-        if len(text) > self.n:
+        if len(text) >= self.n:
             text = text[-self.n+1:]
         if self.n == 2:
             text = text[0]
@@ -86,8 +86,9 @@ class Ngrams:
                             reverse=True)
         top_word_count = word_count[:num_words]
         words = [word[0] for word in top_word_count]
-        # if next word not found, return . as fallback
+        # if next word not found, return "the" (most common English word) as
+        # fallback
         if len(words) == 0:
-            words = ['.']
+            words = ['the']
         prob_dist = self.model[text]
         return words, prob_dist

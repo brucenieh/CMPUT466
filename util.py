@@ -46,7 +46,7 @@ def k_fold(k,path):
     
     return dataset
 
-def evaluate(model,training_data,testing_data):
+def evaluate(model,training_data,testing_data, sentence_length=50):
     """returns the accuracy and perplexity of the model
 
     Args:
@@ -67,8 +67,10 @@ def evaluate(model,training_data,testing_data):
         exit()
     
     for test in testing_data:
-        sentence = test[0:-2]
-        target = test[-2]
+        if len(test) < sentence_length + 1:
+            continue
+        sentence = test[0:sentence_length]
+        target = test[sentence_length]
         try:
             prediction,prob_distrib = model.predict(sentence)
         except Exception as e:
