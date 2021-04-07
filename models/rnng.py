@@ -28,12 +28,16 @@ def repackage_hidden(h):
         return tuple(repackage_hidden(v) for v in h)
 
 class RNNG(nn.Module):
-    def __init__(self, weights_matrix, hidden_size, num_layers,vocab_size):
+    def __init__(self, weights_matrix, hidden_size, num_layers,vocab_size,batch_size):
         super(RNNG,self).__init__()
         self.embedding, num_embeddings, embedding_dim = create_emb_layer(weights_matrix, True)
+        # self.embedding = nn.Embedding(vocab_size, batch_size)
+        # embedding_dim = batch_size
         self.hidden_size = hidden_size
         self.num_layers = num_layers
-        self.gru = nn.GRU(num_embeddings, hidden_size, num_layers, batch_first=True)
+        self.vocab_size = vocab_size
+        self.batch_size = batch_size
+        self.gru = nn.GRU(embedding_dim, hidden_size, num_layers, batch_first=True)
         self.lin = nn.Linear(hidden_size,vocab_size)
 
         
@@ -42,7 +46,11 @@ class RNNG(nn.Module):
         out = self.embedding(inp)
         out,hidden = self.gru(out, hidden)
         out = self.lin(out)
-        return F.softmax(out, dim=1),hidden
+        
+        print('outsize',out.size())
+        out = out.transpose(0, 1)
+        print('outsize',out.size())
+        return F.softmax(out, dim=2),hidden
     
     def init_hidden(self, batch_size):
         return Variable(torch.zeros(self.num_layers, batch_size, self.hidden_size))
