@@ -2,7 +2,9 @@ import raw.readingfiles as readfiles
 import pickle, time
 from models.ngrams import Ngrams
 from models.ANN import ANN
-from util import build_vocab, evaluate, k_fold, read_data, evaluate_ANN
+from models.rnn import RNN
+from util import build_vocab, evaluate, k_fold, read_data, evaluate_ANN, evaluate_RNN
+import util
 
 def tweak_ngram():
     # tweak hyperparameter n for ngram
@@ -55,8 +57,8 @@ def tweak_ANN_batch_size():
     return performance
 
 if __name__ == '__main__':
-    # readfiles.make_datasets()
-    # data_set = k_fold(10, 'training_data.csv')
+    # util.initial_setup() # This line needs to be executed only once
+    
     training_set = read_data('training_data.csv')
     testing_set = read_data('testing_data.csv')
 
@@ -82,3 +84,8 @@ if __name__ == '__main__':
                             ANN_model.mapping)
     
     print("ANN accuracy, perplexity: ", acc, per)
+    
+    RNN_model = RNN(epoch=7)
+    RNN_model.train(training_set)
+    acc, per = evaluate_RNN(RNN_model, testing_set)
+    print("RNN accuracy, perplexity: ", acc, per)
