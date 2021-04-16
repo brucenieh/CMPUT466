@@ -2,8 +2,11 @@ import csv
 import pandas
 import pickle
 import numpy as np
-import raw.readingfiles as readfiles
 import nltk
+
+import raw.readingfiles as readfiles
+from models.ngrams import Ngrams
+from models.ANN import ANN
 
 class Training_data():
     """Data structure to store the training data
@@ -54,7 +57,7 @@ def k_fold(k,path):
         dataset.append(td)
     return dataset
 
-def evaluate(model,training_data,testing_data, sentence_length=50):
+def evaluate_ngrams(model,training_data,testing_data, sentence_length=50):
     """Returns the accuracy and perplexity of the model
 
     Args:
@@ -229,6 +232,90 @@ def build_embeddings(vocab):
             misses += 1
     print("Converted %d words (%d misses)" % (hits, misses))
     return embedding_matrix
+
+def tweak_ngram(data):
+    """Tweak hyperparameter n for ngrams model
+
+    Args:
+        data (Training_data): class containing training data and validation
+                              data for each k-fold
+
+    Returns:
+        list: each index contains hyperparameter n, accuracy and perplexity
+    """
+    performance = []
+    for n in range(2,8):
+        ngrams_model = Ngrams(n)
+        accuracy, perplexity = evaluate_ngrams(ngrams_model,
+                                        data.training_set,
+                                        data.validation_set)
+        performance.append([n, accuracy, perplexity])
+    return performance
+
+def tweak_ANN_epoch(data):
+    """Tweak hyperparameter epoch for ANN model
+
+    Args:
+        data (Training_data): class containing training data and validation
+                              data for each k-fold
+
+    Returns:
+        list: each index contains hyperparameter epoch, accuracy and perplexity
+    """
+    performance = []
+    epochs = [5, 10, 15, 25, 50]
+    for epoch in epochs:
+        ANN_model = ANN(epoch=epoch)
+        ANN_model.train(data.training_set)
+        accuracy, perplexity = evaluate_ANN(ANN_model,
+                                            data.validation_set,
+                                            ANN_model.mapping)
+        performance.append([epoch, accuracy, perplexity])
+    return performance
+
+def tweak_ANN_lr(data):
+    """Tweak hyperparameter learning rate for ANN model
+
+    Args:
+        data (Training_data): class containing training data and validation
+                              data for each k-fold
+
+    Returns:
+        list: each index contains hyperparameter learning rate, accuracy and
+              perplexity
+    """
+    performance = []
+    lrs = [0.001, 0.01, 0.1, 0.5, 1, 2]
+    for lr in lrs:
+        ANN_model = ANN(epoch=5, lr=lr)
+        ANN_model.train(data.training_set)
+        accuracy, perplexity = evaluate_ANN(ANN_model,
+                                            data.validation_set,
+                                            ANN_model.mapping)
+        performance.append([lr, accuracy, perplexity])
+    return performance
+
+def tweak_ANN_batch_size(data):
+    """Tweak hyperparameter batch size for ngrams model
+
+    Args:
+        data (Training_data): class containing training data and validation
+                              data for each k-fold
+
+    Returns:
+        list: each index contains hyperparameter batch size, accuracy and
+              perplexity
+    """
+    performance = []
+    batch_size = [2000, 1500, 1000, 750, 500]
+    for bs in batch_size:
+        ANN_model = ANN(epoch=5, lr=0.1, batch_size=bs)
+        ANN_model.train(data.training_set)
+        accuracy, perplexity = evaluate_ANN(ANN_model,
+                                            data.validation_set,
+                                            ANN_model.mapping)
+        performance.append([bs, accuracy, perplexity])
+    return performance
 
 def initial_setup():
     print("Downloading NLTK packages")
