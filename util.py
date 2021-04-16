@@ -2,8 +2,12 @@ import csv
 import pandas
 import pickle
 import numpy as np
-import raw.readingfiles as readfiles
 import nltk
+
+import raw.readingfiles as readfiles
+from models.ngrams import Ngrams
+from models.ANN import ANN
+import bcolz
 
 class Training_data():
     """Data structure to store the training data
@@ -54,7 +58,7 @@ def k_fold(k,path):
         dataset.append(td)
     return dataset
 
-def evaluate(model,training_data,testing_data, sentence_length=50):
+def evaluate_ngrams(model,training_data,testing_data, sentence_length=50):
     """Returns the accuracy and perplexity of the model
 
     Args:
@@ -230,6 +234,90 @@ def build_embeddings(vocab):
     print("Converted %d words (%d misses)" % (hits, misses))
     return embedding_matrix
 
+def tweak_ngram(data):
+    """Tweak hyperparameter n for ngrams model
+
+    Args:
+        data (Training_data): class containing training data and validation
+                              data for each k-fold
+
+    Returns:
+        list: each index contains hyperparameter n, accuracy and perplexity
+    """
+    performance = []
+    for n in range(2,8):
+        ngrams_model = Ngrams(n)
+        accuracy, perplexity = evaluate_ngrams(ngrams_model,
+                                        data.training_set,
+                                        data.validation_set)
+        performance.append([n, accuracy, perplexity])
+    return performance
+
+def tweak_ANN_epoch(data):
+    """Tweak hyperparameter epoch for ANN model
+
+    Args:
+        data (Training_data): class containing training data and validation
+                              data for each k-fold
+
+    Returns:
+        list: each index contains hyperparameter epoch, accuracy and perplexity
+    """
+    performance = []
+    epochs = [5, 10, 15, 25, 50]
+    for epoch in epochs:
+        ANN_model = ANN(epoch=epoch)
+        ANN_model.train(data.training_set)
+        accuracy, perplexity = evaluate_ANN(ANN_model,
+                                            data.validation_set,
+                                            ANN_model.mapping)
+        performance.append([epoch, accuracy, perplexity])
+    return performance
+
+def tweak_ANN_lr(data):
+    """Tweak hyperparameter learning rate for ANN model
+
+    Args:
+        data (Training_data): class containing training data and validation
+                              data for each k-fold
+
+    Returns:
+        list: each index contains hyperparameter learning rate, accuracy and
+              perplexity
+    """
+    performance = []
+    lrs = [0.001, 0.01, 0.1, 0.5, 1, 2]
+    for lr in lrs:
+        ANN_model = ANN(epoch=5, lr=lr)
+        ANN_model.train(data.training_set)
+        accuracy, perplexity = evaluate_ANN(ANN_model,
+                                            data.validation_set,
+                                            ANN_model.mapping)
+        performance.append([lr, accuracy, perplexity])
+    return performance
+
+def tweak_ANN_batch_size(data):
+    """Tweak hyperparameter batch size for ngrams model
+
+    Args:
+        data (Training_data): class containing training data and validation
+                              data for each k-fold
+
+    Returns:
+        list: each index contains hyperparameter batch size, accuracy and
+              perplexity
+    """
+    performance = []
+    batch_size = [2000, 1500, 1000, 750, 500]
+    for bs in batch_size:
+        ANN_model = ANN(epoch=5, lr=0.1, batch_size=bs)
+        ANN_model.train(data.training_set)
+        accuracy, perplexity = evaluate_ANN(ANN_model,
+                                            data.validation_set,
+                                            ANN_model.mapping)
+        performance.append([bs, accuracy, perplexity])
+    return performance
+
 def initial_setup():
     print("Downloading NLTK packages")
     nltk.download('stopwords')
@@ -241,13 +329,67 @@ def initial_setup():
     training_set = read_data('training_data.csv')
     build_vocab(training_set, 'vocab')
 
-def main():
-    dataset = k_fold(10,'develop.csv')
+# https://medium.com/@martinpella/how-to-use-pre-trained-word-embeddings-in-pytorch-71ca59249f76
+def build_glove_embedding(glove_path):
+    words = []
+    idx = 0
+    word2idx = {}
+    vectors = bcolz.carray(np.zeros(1), rootdir=f'{glove_path}/6B.50.dat', mode='w')
 
-    for data in dataset:
-        print(len(data.validation_set),len(data.training_set))
+    with open(f'{glove_path}/glove.6B.50d.txt', 'rb') as f:
+        for l in f:
+            line = l.decode().split()
+            word = line[0]
+            words.append(word)
+            word2idx[word] = idx
+            idx += 1
+            vect = np.array(line[1:]).astype(np.float)
+            vectors.append(vect)
+        
+    vectors = bcolz.carray(vectors[1:].reshape((400000, 50)), rootdir=f'{glove_path}/6B.50.dat', mode='w')
+    vectors.flush()
+    pickle.dump(words, open(f'{glove_path}/6B.50_words.pkl', 'wb'))
+    pickle.dump(word2idx, open(f'{glove_path}/6B.50_idx.pkl', 'wb'))
+
+def build_vocab_embedding(glove_path):
+    vectors = bcolz.open(f'{glove_path}/6B.50.dat')[:]
+    words = pickle.load(open(f'{glove_path}/6B.50_words.pkl', 'rb'))
+    word2idx = pickle.load(open(f'{glove_path}/6B.50_idx.pkl', 'rb'))
+
+    glove = {w: vectors[word2idx[w]] for w in words}
+
+    with open('vocab.pkl', 'rb') as f:
+        target_vocab = pickle.load(f)
+        target_vocab = sorted(target_vocab.items(), key=lambda kv: kv[1])
     
-    # print(dataset[0].validation_set[3:7])
+    # print('test',target_vocab[:10])
+
+    matrix_len = len(target_vocab)
+    weights_matrix = np.zeros((matrix_len, 50))
+    words_found = 0
+
+    for i, word in enumerate(target_vocab):
+        try: 
+            weights_matrix[i] = glove[word]
+            words_found += 1
+        except KeyError:
+            weights_matrix[i] = np.random.normal(scale=0.6, size=(50, ))
+    
+    pickle.dump(weights_matrix, open('vocab_embedding.pkl', 'wb'))
+
+def main():
+    # build_glove_embedding('glove')
+    build_vocab_embedding('glove')
+    # with open('vocab_embedding.pkl', 'rb') as f:
+    #     mapping = pickle.load(f)
+    
+    # print(mapping.shape)
+
+    # with open('vocab.pkl', 'rb') as f:
+    #     mapping = pickle.load(f)
+    
+    # print(len(mapping))
+    
         
 
 if __name__ == '__main__':
