@@ -10,7 +10,17 @@ from models.rnng import RNNG
 
 
 
-def data_reader(data, batch_size,sentence_length):
+def data_reader(data, batch_size):
+    """Returns a generator to generate data batches from the whole dataset
+    based on batch_size.
+
+    Args:
+        data (list of str): our whole dataset of sentences
+        batch_size (int): size of sentences in each data batch
+
+    Yields:
+        list of str: data batch
+    """
     for i in range(0, len(data), batch_size):
         
         yield data[i:i + batch_size]
@@ -23,56 +33,70 @@ def repackage_hidden(h):
     else:
         return tuple(repackage_hidden(v) for v in h)
 
-def train(mapping,model,data,batch_size,lr):
+def train(mapping,model,data,batch_size,lr,epochs):
+    """training function for RNNG model
+
+    Args:
+        mapping (dict): dictionary that maps word to its corresponding index
+        model (nn.Module): Model to be trained
+        data (list): a list of corpus in forms of a list of tokens
+        batch_size (int): number of corpus to be read in one batch
+        lr (float): learning rate of
+        epochs: number of epochs to train
+    """
     vocab = len(mapping)
     sentence_length = 50
     model.train()
-    dr = data_reader(data, batch_size,sentence_length)
+    
     hidden = model.init_hidden(batch_size)
     optimizer = optim.Adam(model.parameters(), lr)
     criterion = nn.NLLLoss()
-    for batch_data in dr:
-        optimizer.zero_grad()
-        print(len(batch_data))
+    for _ in range(epochs):
+        dr = data_reader(data, batch_size)
+        for batch_data in dr:
+            optimizer.zero_grad()
+            print(len(batch_data))
 
-        X_train = []
-        Y_train = []
-        for line in batch_data:
-            if len(line) < sentence_length + 1:
-                continue
-            vector = np.zeros(vocab)
-            y_word = line[sentence_length]
-            vector[mapping[y_word]] = 1
-            # vector = mapping[y_word]
-            sentence = line[:sentence_length+1]
-            sentence = np.array([mapping[word] for word in sentence])
+            X_train = []
+            Y_train = []
+            for line in batch_data:
+                if len(line) < sentence_length + 1:
+                    continue
+                vector = np.zeros(vocab)
+                y_word = line[sentence_length]
+                vector[mapping[y_word]] = 1
+
+                sentence = line[:sentence_length+1]
+                sentence = np.array([mapping[word] for word in sentence])
+                
+                X_train.append(sentence[0:-1])
+                Y_train.append(vector)
+
+            X_train = np.asarray(X_train)
+            Y_train = np.asarray(Y_train)
+            Y_train = torch.from_numpy(Y_train).type(torch.LongTensor)
+
+            hidden = repackage_hidden(model.init_hidden(len(X_train)))
+            output, hidden = model(X_train,hidden)
             
-            X_train.append(sentence[0:-1])
-            # y_one_hot = np.zeros([50,vocab])
-            # start_index = 0
-            # for index in sentence[1:]:
-            #     y_one_hot[start_index][index] = 1
-            #     start_index += 1
-            # result = np.sum(y_one_hot,axis=1).sum()
-            # print(result)
-            Y_train.append(vector)
-        X_train = np.asarray(X_train)
-        Y_train = np.asarray(Y_train)
-        print(X_train.shape)
-        print(Y_train.shape)
-        Y_train = torch.from_numpy(Y_train).type(torch.LongTensor)
+            loss = criterion(output, Y_train)
+            print('Loss:', loss)
 
-        hidden = repackage_hidden(model.init_hidden(len(X_train)))
-        output, hidden = model(X_train,hidden)
-        print('output',output.shape)
-        print('y train',Y_train.shape)
-
-        loss = criterion(output, Y_train)
-        print(loss)
-        loss.backward()
-        optimizer.step()
+            loss.backward()
+            optimizer.step()
 
 def predict(model, data, mapping):
+    """predicts the next word using our ANN
+
+    Args:
+        model (nn.Module): language model to be used for predicting
+        data (list): a list of corpus in forms of a list of tokens
+        mapping (dict): dictionary that maps word to its corresponding index
+
+    Returns:
+        np.ndarray: an array of prediction's probability distribution with size
+                    [batch_size x vocab size]
+    """
     sentence_length = 50
     X_test = []
     # iterate each review
@@ -128,15 +152,11 @@ def evaluate(model,testing_data,mapping):
     filtered_data = np.asarray(filtered_data)
     prob_distrib = predict(model,filtered_data,mapping)
     
-    print(len(prob_distrib))
-
     for i in range(len(prob_distrib)):
         target = targets[i]
         distrib = prob_distrib[i][-1]
         distrib = distrib/np.linalg.norm(distrib, ord=1)
-        # print(np.sum(distrib))
-        print(distrib.shape)
-
+        
         # check if word is correct
         try:
             correct_index = mapping[target]
@@ -155,7 +175,7 @@ def evaluate(model,testing_data,mapping):
     accuracy = accuracy/len(filtered_data)
     perplexity = perplexity/len(filtered_data)
 
-    return accuracy,perplexity
+    return accuracy,-float(perplexity)
 
 def main():
     data_set = k_fold(10, 'develop.csv')
@@ -165,13 +185,13 @@ def main():
     
     batch_size = 200
     model = RNNG(weights_matrix,100,1,len(mapping),batch_size,0.2)
-    train(mapping,model,data_set[0].training_set[:100],batch_size,0.1)
+    train(mapping,model,data_set[0].training_set,batch_size,0.1,1)
     torch.save(model, 'RNNG.pt')
     
     # For model evaluation
     model = torch.load('RNNG.pt')
-    result = evaluate(model,data_set[0].validation_set,mapping)
-    print(result)
+    acc,perplex = evaluate(model,data_set[0].validation_set,mapping)
+    print(f'Accuracy: {acc}\nPerplexity: {perplex}')
 
 
 if __name__ == '__main__':
