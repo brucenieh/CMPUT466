@@ -101,7 +101,7 @@ class RNN:
             Tuple (accuracy, perplexity, num_of_predictions)
         """
         if (self.model == None):
-            self.model = load_model('./{}/RNN_model'.format(self.model_filename))
+            self.model = load_model('./RNN/RNN_model')
         perplexity = 0
         accuracy = 0
         count = 0
