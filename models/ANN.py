@@ -5,38 +5,7 @@ from tensorflow.keras.layers import Dense, Embedding, Flatten, GRU
 from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.optimizers import Adam
 from sklearn.feature_extraction.text import CountVectorizer
-from tensorflow.keras.utils import Sequence
 import os
-
-class BatchSequence(Sequence):
-    """Sequence class for loading training data
-    
-    Our training labels can become too large to fit in memory since
-    each training label is a 1-hot vector of size vocab_size. To fix this,
-    we train our model in batches and generate the labels for batches
-    on the fly
-    """
-    def __init__(self, data, mapping, vocab_size, sequence_length, batch_size):
-        self.data = [i for i in data if len(i) > sequence_length]
-        self.mapping = mapping
-        self.vocab_size = vocab_size
-        self.sequence_length = sequence_length
-        self.batch_size = batch_size
-
-    def __len__(self):
-        return int(np.ceil(len(self.data) / float(self.batch_size)))
-
-    def __getitem__(self, idx):
-        X_train = []
-        Y_train = []
-        for line in self.data[idx * self.batch_size:(idx + 1) * self.batch_size]:
-            X_train.append([self.mapping[word] for word in line[:self.sequence_length]])
-            new_y = np.zeros(self.vocab_size)
-            new_y[self.mapping[line[self.sequence_length]]] = 1
-            Y_train.append(new_y)
-        X_train = np.array(X_train)
-        Y_train = np.array(Y_train)
-        return X_train, Y_train
 
 class ANN:
     def __init__(self, sentence_length=50, batch_size=1000, epoch=10, lr=0.001):

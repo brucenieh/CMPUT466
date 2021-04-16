@@ -3,8 +3,7 @@ import pickle, time
 from models.ngrams import Ngrams
 from models.ANN import ANN
 from models.rnn import RNN
-from util import build_vocab, evaluate, k_fold, read_data, evaluate_ANN, evaluate_RNN
-import util
+from util import initial_setup, evaluate, k_fold, read_data, evaluate_ANN, evaluate_RNN
 
 def tweak_ngram():
     # tweak hyperparameter n for ngram
@@ -57,7 +56,7 @@ def tweak_ANN_batch_size():
     return performance
 
 if __name__ == '__main__':
-    # util.initial_setup() # This line needs to be executed only once
+    initial_setup() # This line needs to be executed only once
     
     training_set = read_data('training_data.csv')
     testing_set = read_data('testing_data.csv')
@@ -76,13 +75,11 @@ if __name__ == '__main__':
     accuracy,perplexity = evaluate(ngrams_model, training_set, testing_set, 50)
     print("Ngram accuracy, perplexity: ", accuracy, perplexity)
 
-
     ANN_model = ANN(epoch=5, lr=0.1, batch_size=2000)
     ANN_model.train(training_set)
     acc, per = evaluate_ANN(ANN_model,
                             testing_set,
                             ANN_model.mapping)
-    
     print("ANN accuracy, perplexity: ", acc, per)
     
     RNN_model = RNN(epoch=7)
