@@ -1,5 +1,7 @@
 import csv
 import pandas
+import pickle
+import numpy as np
 
 class Training_data():
     """data structure to store the training data
@@ -94,6 +96,76 @@ def evaluate(model,training_data,testing_data, sentence_length=50):
     perplexity = perplexity/len(testing_data)
 
     return accuracy,perplexity
+
+def evaluate_ANN(model,testing_data,mapping):
+    """Returns the accuracy and perplexity of the ANN model
+
+    Args:
+        model (Model): ANN Model
+        testing_data (list of str): Data for the model to be tested on
+        mapping (dictionary): Vocabulary of model
+
+    Returns:
+        float: Accuracy of the model
+        float: Perplexity of the model
+    """
+    accuracy = 0
+    perplexity = 0
+    filtered_data = []
+    targets = []
+    for test in testing_data:
+        # skip sentences shorter than 51 words
+        if len(test) < model.sentence_length + 1:
+            continue
+        filtered_data.append(test[:model.sentence_length])
+        targets.append(test[model.sentence_length])
+    # predict using filtered data
+    filtered_data = np.asarray(filtered_data)
+    prob_distrib = model.predict(filtered_data)
+
+    for i in range(len(prob_distrib)):
+        target = targets[i]
+        # check if word is correct
+        try:
+            correct_index = mapping[target]
+        except:
+            perplexity += 1/0.000001
+
+        # compare prediction from model and update accuracy
+        if np.argmax(prob_distrib[i]) == correct_index:
+            accuracy += 1
+        # update perplexity
+        try:
+            perplexity += 1/prob_distrib[i][correct_index]
+        except:
+            perplexity += 1/0.000001
+
+    accuracy = accuracy/len(filtered_data)
+    perplexity = perplexity/len(filtered_data)
+
+    return accuracy,perplexity
+
+def build_vocab(data,name):
+    """Build model's vocabulary from every word in training data and save to a
+    pickle file.
+
+    Args:
+        data (list of str): training data containing reviews
+        name (str): filename for pickle
+    """
+    mapping = {}
+    counter = 0
+    for line in data:
+        for word in line:
+            if word in mapping:
+                continue
+            # for each unseen word, we index it incrementally
+            else:
+                mapping[word] = counter
+                counter += 1
+
+    with open(name + '.pkl', 'wb') as f:
+        pickle.dump(mapping, f, pickle.HIGHEST_PROTOCOL)
 
 def main():
     dataset = k_fold(10,'develop.csv')
