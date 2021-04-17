@@ -8,7 +8,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 import os
 
 class ANN:
-    def __init__(self, sentence_length=50, batch_size=1000, epoch=10, lr=0.001):
+    def __init__(self, sentence_length=50, batch_size=2000, epoch=5, lr=0.1):
         """Our ANN model is a simple feed-forward neural network and is based on
         Keras' Sequential model. Mapping is the model's vocabulary, which is a
         dictionary with key-value, 'word': incrementing index. Mapping is 
