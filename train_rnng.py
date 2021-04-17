@@ -178,7 +178,7 @@ def evaluate(model,testing_data,mapping):
     return accuracy,-float(perplexity)
 
 def main():
-    data_set = k_fold(10, 'develop.csv')
+    data_set = k_fold(10, 'training_data.csv')
     weights_matrix = pickle.load(open('vocab_embedding.pkl', 'rb'))
     with open('vocab.pkl', 'rb') as f:
         mapping = pickle.load(f)

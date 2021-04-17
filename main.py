@@ -3,8 +3,11 @@ import pickle, time
 from models.ngrams import Ngrams
 from models.ANN import ANN
 from models.rnn import RNN
+from models.rnng import RNNG
+from train_rnng import train, evaluate
 from util import initial_setup, read_data, evaluate_ngrams, \
                  evaluate_ANN, evaluate_RNN
+
 
 if __name__ == '__main__':
     initial_setup() # This line needs to be executed only once
@@ -26,3 +29,14 @@ if __name__ == '__main__':
     RNN_model.train(training_set)
     acc, per = evaluate_RNN(RNN_model, testing_set)
     print("RNN accuracy, perplexity: ", acc, per)
+
+    # Load glove embedding
+    weights_matrix = pickle.load(open('vocab_embedding.pkl', 'rb'))
+    with open('vocab.pkl', 'rb') as f:
+        mapping = pickle.load(f)
+    
+    RNNG_model = RNNG(weights_matrix,hidden_size=100,num_layers=2,
+                      vocab_size=len(mapping),batch_size=200,dropout=0.2)
+    train(mapping,RNNG_model,training_set,200,0.1,1)
+    acc, per = evaluate(RNNG_model,testing_set,mapping)
+    print("RNNG accuracy, perplexity: ", acc, per)

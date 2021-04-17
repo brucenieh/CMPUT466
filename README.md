@@ -19,6 +19,14 @@ tensorflow
 
 Install these packages with `pip3 install -r requirements.txt`
 
+Additonally, `bcolz` package is required to build vocabulary embedding:
+```
+pip install -U bcolz
+```
+or
+```
+conda install -c conda-forge bcolz
+```
 
 #### Download GloVe Embeddings
 
