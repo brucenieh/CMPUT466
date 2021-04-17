@@ -2,11 +2,11 @@
 
 ## Installation
 
-#### Clone Repoistory
+### Clone Repoistory
 
 Clone the github repository to your workspace
 
-#### Install Dependencies
+### Install Dependencies
 
 The following python packages are required for the project:
 ```
@@ -20,11 +20,11 @@ tensorflow
 Install these packages with `pip3 install -r requirements.txt`
 
 
-#### Download GloVe Embeddings
+### Download GloVe Embeddings
 
 Download the GloVe embeddings using [this link](http://downloads.cs.stanford.edu/nlp/data/glove.6B.zip) and extract the file `glove.6B.100d.txt` to the project root directory
 
-#### Training and Predicting
+### Training and Predicting
 
 The provided `main.py` file instantiates each model and performs training and prediction on the IMDb dataset. If you would like to test a model, it can be imported from the corresponding module in the `models` directory. If you are running the code for the first time, we need to build the training and testing dataset files, download relevant packages from nltk and build a vocabulary. This step only needs to be done once. It is time consuming to perform this step every time the program runs, so it would be meaningful to comment out [this line](https://github.com/brucenieh/CMPUT466/blob/1f0b78caee8d0e1523a3365270d1fa8052840565/main.py#L59) after it has been executed at least once.
 

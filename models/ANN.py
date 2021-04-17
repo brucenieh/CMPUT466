@@ -142,6 +142,6 @@ class ANN:
             X_test.append(sentence)
         # convert list to Numpy array
         X_test = np.asarray(X_test)
-        Y_hat = self.model.predict(X_test)
+        Y_hat = self.model.predict_on_batch(X_test)
 
         return Y_hat
