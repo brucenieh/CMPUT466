@@ -28,6 +28,9 @@ Download the GloVe embeddings using [this link](http://downloads.cs.stanford.edu
 
 The provided `main.py` file instantiates each model and performs training and prediction on the IMDb dataset. If you would like to test a model, it can be imported from the corresponding module in the `models` directory. If you are running the code for the first time, we need to build the training and testing dataset files, download relevant packages from nltk and build a vocabulary. This step only needs to be done once. It is time consuming to perform this step every time the program runs, so it would be meaningful to comment out [this line](https://github.com/brucenieh/CMPUT466/blob/1f0b78caee8d0e1523a3365270d1fa8052840565/main.py#L59) after it has been executed at least once.
 
+## Known Issues
+
+If you run into Out of Memory (OOM) issues, try reducing the batch_size to one of (1000, 500, 100) for the corresponding model. An example of how to set a batch_size for a model can be found [here](https://github.com/brucenieh/CMPUT466/blob/1f0b78caee8d0e1523a3365270d1fa8052840565/main.py#L78)
 
 ## References
 n-gram Model in Python
